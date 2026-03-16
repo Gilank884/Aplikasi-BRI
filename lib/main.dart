@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
-          iconTheme: const IconThemeData(color: Color(0xFFFA6400)),
+          iconTheme: IconThemeData(color: const Color(0xFFFA6400)),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(

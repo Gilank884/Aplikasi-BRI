@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:marica/models/ticket_model.dart';
 import 'package:marica/repositories/ticket_repository.dart';
 import 'package:pie_chart/pie_chart.dart';
@@ -406,7 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.info_outline_rounded, color: Color(0xFF00529C), size: 20),
+                                        Icon(Icons.info_outline_rounded, color: const Color(0xFF00529C), size: 20),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Text(
@@ -538,7 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ],
                                   ),
-                              if (!_isLoading && _openTicketLocations.isEmpty)
+                              if (!_isLoading && _openTicketsList.isEmpty)
                                 Container(
                                   color: Colors.black.withValues(alpha: 0.05),
                                   child: const Center(

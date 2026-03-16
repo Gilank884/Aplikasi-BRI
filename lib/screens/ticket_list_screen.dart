@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:marica/models/ticket_model.dart';
 import 'package:marica/repositories/ticket_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -75,7 +76,7 @@ class _TicketListScreenState extends State<TicketListScreen>
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Cari Merchant atau ID Tiket...',
-                prefixIcon: const Icon(Icons.search, color:  Color(0xFF00529C)),
+                prefixIcon: Icon(Icons.search, color:  const Color(0xFF00529C)),
                 filled: true,
                 fillColor: Colors.grey[100],
                 border: OutlineInputBorder(
@@ -252,10 +253,10 @@ class _TicketListScreenState extends State<TicketListScreen>
                             Expanded(
                               child: Text(
                                 merchantName,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: Color(0xFF333333),
+                                  color: const Color(0xFF333333),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

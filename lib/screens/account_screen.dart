@@ -193,7 +193,7 @@ class _AccountScreenState extends State<AccountScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF333333))),
+              Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF333333))),
             ],
           ),
         ],

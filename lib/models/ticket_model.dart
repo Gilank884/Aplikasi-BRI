@@ -288,9 +288,9 @@ class Ticket {
       'cm_chk_extra': cmChkExtra,
       'pu_chk_edc': puChkEdc,
       'pu_chk_sam_card': puChkSamCard,
-      'pu_chk_sim_card': pu_chk_sim_card,
-      'pu_chk_promo_material': pu_chk_promo_material,
-      'pu_chk_cable_adapter': pu_chk_cable_adapter,
+      'pu_chk_sim_card': puChkSimCard,
+      'pu_chk_promo_material': puChkPromoMaterial,
+      'pu_chk_cable_adapter': puChkCableAdapter,
     };
   }
 }
