@@ -202,6 +202,22 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Ticket Status & Priority Info
+            _buildSectionCard(
+              title: 'Informasi Tiket',
+              icon: Icons.confirmation_number_outlined,
+              child: Column(
+                children: [
+                   _buildInfoRow('ID Tiket', '#${_ticket?['ticket_id'] ?? '-'}'),
+                   const Divider(height: 24),
+                   _buildInfoRow('Jenis (Type)', _ticket?['type'] ?? '-'),
+                   const Divider(height: 24),
+                   _buildInfoRow('Prioritas', _ticket?['priority'] ?? '-'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
             // Merchant Info Card
             _buildSectionCard(
               title: 'Informasi Merchant',

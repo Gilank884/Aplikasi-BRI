@@ -4,9 +4,9 @@ import 'ticket_detail_screen.dart';
 
 class TicketListScreen extends StatefulWidget {
   final String? initialStatus;
-  final String? filterPriority;
+  final String? filterType;
 
-  const TicketListScreen({super.key, this.initialStatus, this.filterPriority});
+  const TicketListScreen({super.key, this.initialStatus, this.filterType});
 
   @override
   State<TicketListScreen> createState() => _TicketListScreenState();
@@ -106,8 +106,8 @@ class _TicketListScreenState extends State<TicketListScreen>
         .select('*, merchants(merchant_name, address)')
         .eq('status', status);
 
-    if (widget.filterPriority != null) {
-      query = query.eq('priority', widget.filterPriority!);
+    if (widget.filterType != null) {
+      query = query.eq('type', widget.filterType!);
     }
 
     // Apply ordering last
@@ -166,6 +166,7 @@ class _TicketListScreenState extends State<TicketListScreen>
             final merchant = ticket['merchants'] as Map<String, dynamic>?;
             final merchantName = merchant?['merchant_name'] ?? 'Unknown Merchant';
             final address = merchant?['address'] ?? '-';
+            final type = ticket['type'] ?? 'Unknown';
             final priority = ticket['priority'] ?? 'REGULER';
             final ticketId = ticket['ticket_id'] ?? '-';
             
@@ -219,6 +220,24 @@ class _TicketListScreenState extends State<TicketListScreen>
                               ),
                             ),
                             const Spacer(),
+                            // Show Type
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: _getTypeColor(type).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                type,
+                                style: TextStyle(
+                                  color: _getTypeColor(type),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Show Priority
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
@@ -306,5 +325,20 @@ class _TicketListScreenState extends State<TicketListScreen>
         );
       },
     );
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type.toUpperCase()) {
+      case 'INSTALL':
+        return const Color(0xFF1E88E5);
+      case 'PULLOUT':
+        return const Color(0xFFE53935);
+      case 'PM':
+        return const Color(0xFF43A047);
+      case 'CM':
+        return const Color(0xFFFB8C00);
+      default:
+        return Colors.grey;
+    }
   }
 }

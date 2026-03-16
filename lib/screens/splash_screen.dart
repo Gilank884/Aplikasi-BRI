@@ -25,24 +25,35 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF00529C),
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(
-              Icons.admin_panel_settings,
-              color: Colors.white,
-              size: 90,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'BNI',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+          children: [
+            Image.asset(
+              'assets/bni.png',
+              width: 180,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Column(
+                  children: [
+                    Icon(
+                      Icons.account_balance_rounded,
+                      color: Color(0xFFFA6400),
+                      size: 90,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'BNI',
+                      style: TextStyle(
+                        color: Color(0xFFFA6400),
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),

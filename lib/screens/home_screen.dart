@@ -16,8 +16,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _openTickets = 0;
   int _pendingTickets = 0;
   int _closedTickets = 0;
-  int _urgentTickets = 0;
-  int _regularTickets = 0;
+  int _installTickets = 0;
+  int _pulloutTickets = 0;
+  int _pmTickets = 0;
+  int _cmTickets = 0;
 
   bool _isLoading = true;
 
@@ -36,8 +38,10 @@ class _HomeScreenState extends State<HomeScreen> {
         supabase.from('tickets').count(CountOption.exact).eq('status', 'OPEN'),
         supabase.from('tickets').count(CountOption.exact).eq('status', 'CLOSED'),
         supabase.from('tickets').count(CountOption.exact).eq('status', 'PENDING'),
-        supabase.from('tickets').count(CountOption.exact).eq('priority', 'URGENT').eq('status', 'OPEN'),
-        supabase.from('tickets').count(CountOption.exact).eq('priority', 'REGULER').eq('status', 'OPEN'),
+        supabase.from('tickets').count(CountOption.exact).eq('type', 'INSTALL').eq('status', 'OPEN'),
+        supabase.from('tickets').count(CountOption.exact).eq('type', 'PULLOUT').eq('status', 'OPEN'),
+        supabase.from('tickets').count(CountOption.exact).eq('type', 'PM').eq('status', 'OPEN'),
+        supabase.from('tickets').count(CountOption.exact).eq('type', 'CM').eq('status', 'OPEN'),
       ]);
 
       // Fetch 5 most recent tickets
@@ -52,8 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _openTickets = results[0];
           _closedTickets = results[1];
           _pendingTickets = results[2];
-          _urgentTickets = results[3];
-          _regularTickets = results[4];
+          _installTickets = results[3];
+          _pulloutTickets = results[4];
+          _pmTickets = results[5];
+          _cmTickets = results[6];
           _recentTickets = List<Map<String, dynamic>>.from(recentData);
           _isLoading = false;
         });
@@ -66,6 +72,18 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     }
+  }
+
+  void _navigateToTicketList(String type) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TicketListScreen(
+          initialStatus: 'OPEN',
+          filterType: type,
+        ),
+      ),
+    );
   }
 
   @override
@@ -328,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       // --- PRIORITY SECTION ---
                       const Text(
-                        "Status Prioritas",
+                        "Kategori Tiket",
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -338,46 +356,41 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      Row(
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 1.2,
                         children: [
-                          Expanded(
-                            child: _PriorityCard(
-                              title: "Urgent",
-                              count: _urgentTickets,
-                              gradientColors: const [Color(0xFFEF5350), Color(0xFFE53935)],
-                              icon: Icons.warning_rounded,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const TicketListScreen(
-                                      initialStatus: 'OPEN',
-                                      filterPriority: 'URGENT',
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                          _PriorityCard(
+                            title: "INSTALL",
+                            count: _installTickets,
+                            gradientColors: const [Color(0xFF42A5F5), Color(0xFF1E88E5)],
+                            icon: Icons.add_to_home_screen_rounded,
+                            onTap: () => _navigateToTicketList('INSTALL'),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _PriorityCard(
-                              title: "Reguler",
-                              count: _regularTickets,
-                              gradientColors: const [Color(0xFF42A5F5), Color(0xFF1E88E5)],
-                              icon: Icons.assignment_rounded,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const TicketListScreen(
-                                      initialStatus: 'OPEN',
-                                      filterPriority: 'REGULER',
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                          _PriorityCard(
+                            title: "PULLOUT",
+                            count: _pulloutTickets,
+                            gradientColors: const [Color(0xFFEF5350), Color(0xFFE53935)],
+                            icon: Icons.remove_from_queue_rounded,
+                            onTap: () => _navigateToTicketList('PULLOUT'),
+                          ),
+                          _PriorityCard(
+                            title: "PM",
+                            count: _pmTickets,
+                            gradientColors: const [Color(0xFF66BB6A), Color(0xFF43A047)],
+                            icon: Icons.build_rounded,
+                            onTap: () => _navigateToTicketList('PM'),
+                          ),
+                          _PriorityCard(
+                            title: "CM",
+                            count: _cmTickets,
+                            gradientColors: const [Color(0xFFFFA726), Color(0xFFFB8C00)],
+                            icon: Icons.bug_report_rounded,
+                            onTap: () => _navigateToTicketList('CM'),
                           ),
                         ],
                       ),
