@@ -1,7 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:marica/models/ticket_model.dart';
+import 'package:marica/repositories/ticket_repository.dart';
 import 'package:pie_chart/pie_chart.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ticket_list_screen.dart';
+import 'ticket_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,7 +27,87 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isLoading = true;
 
-  List<Map<String, dynamic>> _recentTickets = [];
+  List<Ticket> _openTicketsList = [];
+  final MapController _mapController = MapController();
+
+  LatLng _getInitialCenter() {
+    if (_openTicketsList.isNotEmpty) {
+      double avgLat = 0;
+      double avgLng = 0;
+      int count = 0;
+      for (var ticket in _openTicketsList) {
+        final latValue = ticket.latitude ?? ticket.merchant?['latitude']?.toString();
+        final lngValue = ticket.longitude ?? ticket.merchant?['longitude']?.toString();
+        
+        if (latValue != null && lngValue != null) {
+          final lat = double.tryParse(latValue) ?? 0.0;
+          final lng = double.tryParse(lngValue) ?? 0.0;
+          avgLat += lat;
+          avgLng += lng;
+          count++;
+        }
+      }
+      if (count > 0) return LatLng(avgLat / count, avgLng / count);
+    }
+    return LatLng(-6.2088, 106.8456); // Default: Jakarta
+  }
+
+  List<Marker> _buildMarkers() {
+    return _openTicketsList.where((ticket) {
+      final latValue = ticket.latitude ?? ticket.merchant?['latitude']?.toString();
+      final lngValue = ticket.longitude ?? ticket.merchant?['longitude']?.toString();
+      return latValue != null && lngValue != null;
+    }).map((ticket) {
+      final latValue = ticket.latitude ?? ticket.merchant?['latitude']?.toString();
+      final lngValue = ticket.longitude ?? ticket.merchant?['longitude']?.toString();
+      
+      final lat = double.tryParse(latValue ?? '0') ?? 0.0;
+      final lng = double.tryParse(lngValue ?? '0') ?? 0.0;
+      final merchantName = ticket.merchant?['merchant_name'] ?? 'Merchant';
+      final type = ticket.type;
+
+      return Marker(
+        point: LatLng(lat, lng),
+        width: 40,
+        height: 40,
+        child: GestureDetector(
+          onTap: () {
+             ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('$merchantName [$type]'),
+                action: SnackBarAction(
+                  label: 'DETAIL',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TicketDetailScreen(ticketId: ticket.ticketId),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+          child: Icon(
+            Icons.location_on_rounded,
+            color: _getTypeColor(type),
+            size: 40,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type.toUpperCase()) {
+      case 'INSTALL': return const Color(0xFF1E88E5);
+      case 'PULLOUT': return const Color(0xFFE53935);
+      case 'PM': return const Color(0xFF43A047);
+      case 'CM': return const Color(0xFFFB8C00);
+      default: return Colors.grey;
+    }
+  }
 
   @override
   void initState() {
@@ -44,12 +128,11 @@ class _HomeScreenState extends State<HomeScreen> {
         supabase.from('tickets').count(CountOption.exact).eq('type', 'CM').eq('status', 'OPEN'),
       ]);
 
-      // Fetch 5 most recent tickets
-      final recentData = await supabase
+      // Fetch all open tickets with merchant locations
+      final locationsData = await supabase
           .from('tickets')
-          .select('*, merchants(merchant_name)')
-          .order('opened_at', ascending: false)
-          .limit(5);
+          .select('*, merchants(*)')
+          .eq('status', 'OPEN');
 
       if (mounted) {
         setState(() {
@@ -60,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _pulloutTickets = results[4];
           _pmTickets = results[5];
           _cmTickets = results[6];
-          _recentTickets = List<Map<String, dynamic>>.from(recentData);
+          _openTicketsList = (locationsData as List).map((json) => Ticket.fromJson(json)).toList();
           _isLoading = false;
         });
       }
@@ -397,12 +480,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       
                       const SizedBox(height: 32),
 
-                      // --- RECENT ACTIVITY SECTION ---
+                      // --- MAP SECTION ---
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            "Aktivitas Terbaru",
+                            "Peta Lokasi Tiket (OPEN)",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -419,112 +502,57 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 );
                             },
-                            child: const Text("Lihat Semua"),
+                            child: const Text("Lihat Daftar"),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       
-                      if (_recentTickets.isEmpty && !_isLoading)
-                        Container(
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          height: 300,
                           width: double.infinity,
-                          padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.grey.shade200),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
                           ),
-                          child: Center(
-                            child: Text(
-                              "Belum ada tiket terbaru",
-                              style: TextStyle(color: Colors.grey[500]),
-                            ),
-                          ),
-                        )
-                      else
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _recentTickets.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final ticket = _recentTickets[index];
-                            final merchant = ticket['merchants'] as Map<String, dynamic>?;
-                            final merchantName = merchant?['merchant_name'] ?? 'Unknown';
-                            final ticketId = ticket['ticket_id'] ?? '-';
-                            final status = ticket['status'] ?? 'Unknown';
-                            
-                            return Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withValues(alpha: 0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE3F2FD),
-                                      borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            children: [
+                              _isLoading 
+                                ? const Center(child: CircularProgressIndicator())
+                                : FlutterMap(
+                                    mapController: _mapController,
+                                    options: MapOptions(
+                                      initialCenter: _getInitialCenter(),
+                                      initialZoom: 11.0,
                                     ),
-                                    child: const Icon(Icons.confirmation_number_outlined, color: Color(0xFF00529C), size: 20),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          merchantName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: Color(0xFF333333),
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          "#$ticketId",
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: status == 'OPEN' ? const Color(0xFFFFEBEE) : 
-                                             status == 'CLOSED' ? const Color(0xFFE8F5E9) : const Color(0xFFE3F2FD),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      status,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: status == 'OPEN' ? const Color(0xFFD32F2F) :
-                                               status == 'CLOSED' ? const Color(0xFF388E3C) : const Color(0xFF1976D2),
+                                    children: [
+                                      TileLayer(
+                                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                        userAgentPackageName: 'com.bniedc.app',
                                       ),
+                                      MarkerLayer(
+                                        markers: _buildMarkers(),
+                                      ),
+                                    ],
+                                  ),
+                              if (!_isLoading && _openTicketLocations.isEmpty)
+                                Container(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  child: const Center(
+                                    child: Text(
+                                      "Tidak ada tiket terbuka saat ini",
+                                      style: TextStyle(fontWeight: FontWeight.w500),
                                     ),
                                   ),
-                                ],
-                              ),
-                            );
-                          },
+                                ),
+                            ],
+                          ),
                         ),
+                      ),
+
                     ],
                   ),
                 ),

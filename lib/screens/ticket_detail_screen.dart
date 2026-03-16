@@ -1,9 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:signature/signature.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:signature/signature.dart';
+import 'package:image_picker/image_picker.dart';
+import '../models/ticket_model.dart';
+import '../repositories/ticket_repository.dart';
 
 class TicketDetailScreen extends StatefulWidget {
   final String ticketId;
@@ -15,15 +15,18 @@ class TicketDetailScreen extends StatefulWidget {
 }
 
 class _TicketDetailScreenState extends State<TicketDetailScreen> {
+  final TicketRepository _ticketRepository = TicketRepository();
   final SupabaseClient supabase = Supabase.instance.client;
   bool _isLoading = true;
   bool _isSaving = false;
-  Map<String, dynamic>? _ticket;
+  Ticket? _ticket;
 
   // Form Controllers
   final Map<String, TextEditingController> _textControllers = {};
   final Map<String, String> _keteranganValues = {};
+  final Map<String, bool> _checklists = {};
   String _status = 'OPEN';
+  DateTime? _visitDate;
   
   // Signatures
   final SignatureController _sigPicController = SignatureController(
@@ -45,23 +48,43 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   Future<void> _fetchTicketDetails() async {
     try {
-      final response = await supabase
-          .from('tickets')
-          .select('*, merchants(*)')
-          .eq('ticket_id', widget.ticketId)
-          .single();
+      final ticket = await _ticketRepository.getTicketById(widget.ticketId);
 
-      if (mounted) {
+      if (mounted && ticket != null) {
         setState(() {
-          _ticket = response;
-          _status = response['status'] ?? 'OPEN';
-          _initializeKeteranganField('keterangan_gestun');
-          _initializeKeteranganField('keterangan_pindah_lokasi');
-          _initializeKeteranganField('keterangan_tutup_permanent');
-          _initializeKeteranganField('keterangan_edc');
-          _initializeKeteranganField('keterangan_fraud');
-          _initializeKeteranganField('keterangan_qris');
-          _initializeKeteranganField('keterangan_dokumen');
+          _ticket = ticket;
+          _status = ticket.status;
+          _visitDate = ticket.visitDate;
+          
+          // General controllers
+          _textControllers['latitude'] = TextEditingController(text: ticket.latitude);
+          _textControllers['longitude'] = TextEditingController(text: ticket.longitude);
+          _textControllers['bast_status'] = TextEditingController(text: ticket.bastStatus);
+          _textControllers['contact_phone'] = TextEditingController(text: ticket.contactPhone);
+          _textControllers['current_sn'] = TextEditingController(text: ticket.currentSn);
+          _textControllers['current_edc_status'] = TextEditingController(text: ticket.currentEdcStatus);
+          _textControllers['replacement_sn'] = TextEditingController(text: ticket.replacementSn);
+          _textControllers['replacement_model'] = TextEditingController(text: ticket.replacementModel);
+          _textControllers['loss_notes'] = TextEditingController(text: ticket.lossNotes);
+          _textControllers['user_notes'] = TextEditingController(text: ticket.userNotes);
+
+          // Setup Switch/Bool states
+          _checklists['test_transaction'] = ticket.testTransaction;
+          _checklists['app_upgrade'] = ticket.appUpgrade;
+          _checklists['bni_sales_slip'] = ticket.bniSalesSlip;
+          _checklists['bni_standard_ack'] = ticket.bniStandardAck;
+          _checklists['has_loss'] = ticket.hasLoss;
+
+          // Type Specific Checklists
+          _initializeChecklists(ticket);
+
+          _initializeKeteranganField('keterangan_gestun', ticket.keteranganGestun);
+          _initializeKeteranganField('keterangan_pindah_lokasi', ticket.keteranganPindahLokasi);
+          _initializeKeteranganField('keterangan_tutup_permanent', ticket.keteranganTutupPermanent);
+          _initializeKeteranganField('keterangan_edc', ticket.keteranganEdc);
+          _initializeKeteranganField('keterangan_fraud', ticket.keteranganFraud);
+          _initializeKeteranganField('keterangan_qris', ticket.keteranganQris);
+          _initializeKeteranganField('keterangan_dokumen', ticket.keteranganDokumen);
           _isLoading = false;
         });
       }
@@ -76,8 +99,43 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     }
   }
 
-  void _initializeKeteranganField(String key) {
-    final value = _ticket?[key] as String?;
+  void _initializeChecklists(Ticket ticket) {
+    if (ticket.type == 'INSTALL') {
+      _checklists['ins_chk_reader_edc'] = ticket.insChkReaderEdc;
+      _checklists['ins_chk_sam_card'] = ticket.insChkSamCard;
+      _checklists['ins_chk_sim_card'] = ticket.insChkSimCard;
+      _checklists['ins_chk_stacker'] = ticket.insChkStacker;
+      _checklists['ins_chk_thermal_paper'] = ticket.insChkThermalPaper;
+      _checklists['ins_chk_promo_material'] = ticket.insChkPromoMaterial;
+      _checklists['ins_chk_extra'] = ticket.insChkExtra;
+    } else if (ticket.type == 'PM') {
+      _checklists['pm_chk_edc'] = ticket.pmChkEdc;
+      _checklists['pm_chk_sam_card'] = ticket.pmChkSamCard;
+      _checklists['pm_chk_sim_card'] = ticket.pmChkSimCard;
+      _checklists['pm_chk_cable_ecr'] = ticket.pmChkCableEcr;
+      _checklists['pm_chk_adapter'] = ticket.pmChkAdapter;
+      _checklists['pm_chk_thermal_supply'] = ticket.pmChkThermalSupply;
+      _checklists['pm_chk_promo_material'] = ticket.pmChkPromoMaterial;
+      _checklists['pm_chk_extra'] = ticket.pmChkExtra;
+    } else if (ticket.type == 'CM') {
+      _checklists['cm_chk_edc'] = ticket.cmChkEdc;
+      _checklists['cm_chk_sam_card'] = ticket.cmChkSamCard;
+      _checklists['cm_chk_sim_card'] = ticket.cmChkSimCard;
+      _checklists['cm_chk_cable_ecr'] = ticket.cmChkCableEcr;
+      _checklists['cm_chk_adapter'] = ticket.cmChkAdapter;
+      _checklists['cm_chk_thermal_supply'] = ticket.cmChkThermalSupply;
+      _checklists['cm_chk_promo_material'] = ticket.cmChkPromoMaterial;
+      _checklists['cm_chk_extra'] = ticket.cmChkExtra;
+    } else if (ticket.type == 'PULLOUT') {
+      _checklists['pu_chk_edc'] = ticket.puChkEdc;
+      _checklists['pu_chk_sam_card'] = ticket.puChkSamCard;
+      _checklists['pu_chk_sim_card'] = ticket.puChkSimCard;
+      _checklists['pu_chk_promo_material'] = ticket.puChkPromoMaterial;
+      _checklists['pu_chk_cable_adapter'] = ticket.puChkCableAdapter;
+    }
+  }
+
+  void _initializeKeteranganField(String key, String? value) {
     if (value == null) {
       _keteranganValues[key] = 'Baik'; // Default
       _textControllers[key] = TextEditingController();
@@ -91,53 +149,110 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Future<void> _saveTicket() async {
+    if (_ticket == null) return;
     setState(() => _isSaving = true);
     try {
-      final updates = <String, dynamic>{
-        'status': _status,
-        'keterangan_gestun': _getKeteranganValue('keterangan_gestun'),
-        'keterangan_pindah_lokasi': _getKeteranganValue('keterangan_pindah_lokasi'),
-        'keterangan_tutup_permanent': _getKeteranganValue('keterangan_tutup_permanent'),
-        'keterangan_edc': _getKeteranganValue('keterangan_edc'),
-        'keterangan_fraud': _getKeteranganValue('keterangan_fraud'),
-        'keterangan_qris': _getKeteranganValue('keterangan_qris'),
-        'keterangan_dokumen': _getKeteranganValue('keterangan_dokumen'),
-        'url_edc': _ticket?['url_edc'],
-        'url_merchant': _ticket?['url_merchant'],
-        'url_sales_draft': _ticket?['url_sales_draft'],
-        'url_pic': _ticket?['url_pic'],
-      };
+      final updatedTicket = Ticket(
+        ticketId: widget.ticketId,
+        status: _status,
+        type: _ticket!.type,
+        priority: _ticket!.priority,
+        latitude: _textControllers['latitude']?.text,
+        longitude: _textControllers['longitude']?.text,
+        visitDate: _visitDate,
+        testTransaction: _checklists['test_transaction'] ?? false,
+        appUpgrade: _checklists['app_upgrade'] ?? false,
+        bastStatus: _textControllers['bast_status']?.text,
+        contactPhone: _textControllers['contact_phone']?.text,
+        bniSalesSlip: _checklists['bni_sales_slip'] ?? false,
+        bniStandardAck: _checklists['bni_standard_ack'] ?? false,
+        currentSn: _textControllers['current_sn']?.text,
+        currentEdcStatus: _textControllers['current_edc_status']?.text,
+        replacementSn: _textControllers['replacement_sn']?.text,
+        replacementModel: _textControllers['replacement_model']?.text,
+        hasLoss: _checklists['has_loss'] ?? false,
+        lossNotes: _textControllers['loss_notes']?.text,
+        userNotes: _textControllers['user_notes']?.text,
+        keteranganGestun: _getKeteranganValue('keterangan_gestun'),
+        keteranganPindahLokasi: _getKeteranganValue('keterangan_pindah_lokasi'),
+        keteranganTutupPermanent: _getKeteranganValue('keterangan_tutup_permanent'),
+        keteranganEdc: _getKeteranganValue('keterangan_edc'),
+        keteranganFraud: _getKeteranganValue('keterangan_fraud'),
+        keteranganQris: _getKeteranganValue('keterangan_qris'),
+        keteranganDokumen: _getKeteranganValue('keterangan_dokumen'),
+        urlEdc: _ticket?.urlEdc,
+        urlMerchant: _ticket?.urlMerchant,
+        urlSalesDraft: _ticket?.urlSalesDraft,
+        urlPic: _ticket?.urlPic,
+        
+        // INSTALL
+        insChkReaderEdc: _checklists['ins_chk_reader_edc'] ?? false,
+        insChkSamCard: _checklists['ins_chk_sam_card'] ?? false,
+        insChkSimCard: _checklists['ins_chk_sim_card'] ?? false,
+        insChkStacker: _checklists['ins_chk_stacker'] ?? false,
+        insChkThermalPaper: _checklists['ins_chk_thermal_paper'] ?? false,
+        insChkPromoMaterial: _checklists['ins_chk_promo_material'] ?? false,
+        insChkExtra: _checklists['ins_chk_extra'] ?? false,
+
+        // PM
+        pmChkEdc: _checklists['pm_chk_edc'] ?? false,
+        pmChkSamCard: _checklists['pm_chk_sam_card'] ?? false,
+        pmChkSimCard: _checklists['pm_chk_sim_card'] ?? false,
+        pmChkCableEcr: _checklists['pm_chk_cable_ecr'] ?? false,
+        pmChkAdapter: _checklists['pm_chk_adapter'] ?? false,
+        pmChkThermalSupply: _checklists['pm_chk_thermal_supply'] ?? false,
+        pmChkPromoMaterial: _checklists['pm_chk_promo_material'] ?? false,
+        pmChkExtra: _checklists['pm_chk_extra'] ?? false,
+
+        // CM
+        cmChkEdc: _checklists['cm_chk_edc'] ?? false,
+        cmChkSamCard: _checklists['cm_chk_sam_card'] ?? false,
+        cmChkSimCard: _checklists['cm_chk_sim_card'] ?? false,
+        cmChkCableEcr: _checklists['cm_chk_cable_ecr'] ?? false,
+        cmChkAdapter: _checklists['cm_chk_adapter'] ?? false,
+        cmChkThermalSupply: _checklists['cm_chk_thermal_supply'] ?? false,
+        cmChkPromoMaterial: _checklists['cm_chk_promo_material'] ?? false,
+        cmChkExtra: _checklists['cm_chk_extra'] ?? false,
+
+        // PULLOUT
+        puChkEdc: _checklists['pu_chk_edc'] ?? false,
+        puChkSamCard: _checklists['pu_chk_sam_card'] ?? false,
+        puChkSimCard: _checklists['pu_chk_sim_card'] ?? false,
+        puChkPromoMaterial: _checklists['pu_chk_promo_material'] ?? false,
+        puChkCableAdapter: _checklists['pu_chk_cable_adapter'] ?? false,
+      );
       
       // Upload signatures if not empty
       if (_sigPicController.isNotEmpty) {
         final bytes = await _sigPicController.toPngBytes();
         if (bytes != null) {
-           // Signature PIC -> documents/signature_pic/[ticket_id].png
            final filename = 'signature_pic/${widget.ticketId}.png'; 
            await _uploadFile(bytes, 'documents', filename); 
-           // Note: We don't save the URL to a column because there's no explicit column for it 
-           // based on current schema understanding, but the file is safely in the bucket.
-           // If we need to save it, we would add it to `updates` here if a column existed.
         }
       }
 
       if (_sigTeknisiController.isNotEmpty) {
         final bytes = await _sigTeknisiController.toPngBytes();
         if (bytes != null) {
-           // Signature Teknisi -> documents/signature_teknisi/[ticket_id].png
            final filename = 'signature_teknisi/${widget.ticketId}.png'; 
            await _uploadFile(bytes, 'documents', filename);
         }
       }
 
-      await supabase.from('tickets').update(updates).eq('ticket_id', widget.ticketId);
+      final success = await _ticketRepository.updateTicket(widget.ticketId, updatedTicket);
       
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tiket berhasil disimpan')),
-        );
-        Navigator.pop(context); // Go back
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tiket berhasil disimpan')),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menyimpan tiket')),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error saving ticket: $e');
@@ -186,14 +301,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final merchant = _ticket?['merchants'];
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Detail Tiket'),
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF00529C),
+        foregroundColor: const Color(0xFFFA6400),
         elevation: 0,
         scrolledUnderElevation: 2,
       ),
@@ -202,17 +315,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Ticket Status & Priority Info
+             // Ticket Status & Priority Info
             _buildSectionCard(
               title: 'Informasi Tiket',
               icon: Icons.confirmation_number_outlined,
               child: Column(
                 children: [
-                   _buildInfoRow('ID Tiket', '#${_ticket?['ticket_id'] ?? '-'}'),
+                   _buildInfoRow('ID Tiket', '#${_ticket?.ticketId ?? '-'}'),
                    const Divider(height: 24),
-                   _buildInfoRow('Jenis (Type)', _ticket?['type'] ?? '-'),
+                   _buildInfoRow('Jenis (Type)', _ticket?.type ?? '-'),
                    const Divider(height: 24),
-                   _buildInfoRow('Prioritas', _ticket?['priority'] ?? '-'),
+                   _buildInfoRow('Prioritas', _ticket?.priority ?? '-'),
+                   const Divider(height: 24),
+                   _buildVisitDateSection(),
                 ],
               ),
             ),
@@ -224,13 +339,86 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               icon: Icons.store_mall_directory_rounded,
               child: Column(
                 children: [
-                   _buildInfoRow('Nama Merchant', merchant?['merchant_name'] ?? '-'),
+                   _buildInfoRow('Nama Merchant', _ticket?.merchant?['merchant_name'] ?? '-'),
                    const Divider(height: 24),
-                   _buildInfoRow('Alamat', merchant?['address'] ?? '-'),
+                   _buildInfoRow('Alamat', _ticket?.merchant?['address'] ?? '-'),
                    const Divider(height: 24),
-                   _buildInfoRow('Kota', merchant?['city'] ?? '-'),
+                   _buildInfoRow('Kota', _ticket?.merchant?['city'] ?? '-'),
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // General Details Card
+            _buildSectionCard(
+              title: 'Detail Kunjungan',
+              icon: Icons.assignment_ind_outlined,
+              child: Column(
+                children: [
+                  _buildTextField('Status BAST', 'bast_status'),
+                  const SizedBox(height: 16),
+                  _buildTextField('Kontak PIC', 'contact_phone'),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(child: _buildTextField('Latitude', 'latitude')),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildTextField('Longitude', 'longitude')),
+                    ],
+                  ),
+                  const Divider(height: 32),
+                  _buildSwitchTile('Test Transaksi', 'test_transaction'),
+                  _buildSwitchTile('App Upgrade', 'app_upgrade'),
+                  _buildSwitchTile('BNI Sales Slip', 'bni_sales_slip'),
+                  _buildSwitchTile('BNI Standard Ack', 'bni_standard_ack'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // EDC Info Card
+            _buildSectionCard(
+              title: 'Informasi EDC',
+              icon: Icons.developer_board,
+              child: Column(
+                children: [
+                  _buildTextField('SN Saat Ini', 'current_sn'),
+                  const SizedBox(height: 16),
+                  _buildTextField('Status EDC Saat Ini', 'current_edc_status'),
+                  const Divider(height: 32),
+                  _buildTextField('SN Pengganti', 'replacement_sn'),
+                  const SizedBox(height: 16),
+                  _buildTextField('Model Pengganti', 'replacement_model'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Checklist Section
+            _buildChecklistSection(),
+            const SizedBox(height: 24),
+
+            // Loss Section
+            _buildSectionCard(
+              title: 'Laporan Kehilangan',
+              icon: Icons.report_problem_outlined,
+              child: Column(
+                children: [
+                  _buildSwitchTile('Ada Kehilangan', 'has_loss'),
+                  if (_checklists['has_loss'] == true) ...[
+                    const SizedBox(height: 16),
+                    _buildTextField('Catatan Kehilangan', 'loss_notes'),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // User Notes
+            _buildSectionCard(
+              title: 'Catatan Teknisi',
+              icon: Icons.note_add_outlined,
+              child: _buildTextField('Catatan Tambahan', 'user_notes'),
             ),
             const SizedBox(height: 24),
 
@@ -249,7 +437,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   child: DropdownButton<String>(
                     value: _status,
                     isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF00529C)),
+                    icon: Icon(Icons.keyboard_arrow_down_rounded, color: const Color(0xFF00529C)),
                     style: const TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.w500),
                     items: ['OPEN', 'PENDING', 'CLOSED'].map((String value) {
                       return DropdownMenuItem<String>(
@@ -502,8 +690,132 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     );
   }
 
+  Widget _buildTextField(String label, String key) {
+    return TextField(
+      controller: _textControllers[key],
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Colors.grey[50],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile(String label, String key) {
+    return SwitchListTile(
+      title: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+      value: _checklists[key] ?? false,
+      onChanged: (val) => setState(() => _checklists[key] = val),
+      contentPadding: EdgeInsets.zero,
+      activeColor: const Color(0xFFFA6400),
+    );
+  }
+
+  Widget _buildChecklistTile(String label, String key) {
+    return CheckboxListTile(
+      title: Text(label, style: const TextStyle(fontSize: 14)),
+      value: _checklists[key] ?? false,
+      onChanged: (val) => setState(() => _checklists[key] = val ?? false),
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
+      activeColor: const Color(0xFFFA6400),
+    );
+  }
+
+  Widget _buildVisitDateSection() {
+    return InkWell(
+      onTap: () async {
+        final date = await showDatePicker(
+          context: context,
+          initialDate: _visitDate ?? DateTime.now(),
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2100),
+        );
+        if (date != null) setState(() => _visitDate = date);
+      },
+      child: _buildInfoRow(
+        'Tanggal Kunjungan',
+        _visitDate != null ? _visitDate!.toIso8601String().split('T')[0] : 'Pilih Tanggal',
+      ),
+    );
+  }
+
+  Widget _buildChecklistSection() {
+    if (_ticket == null) return const SizedBox.shrink();
+    
+    String title = 'Checklist Terintegrasi';
+    List<Widget> items = [];
+
+    if (_ticket!.type == 'INSTALL') {
+      title = 'Checklist Pemasangan (INSTALL)';
+      items = [
+        _buildChecklistTile('Reader EDC', 'ins_chk_reader_edc'),
+        _buildChecklistTile('SAM Card', 'ins_chk_sam_card'),
+        _buildChecklistTile('SIM Card', 'ins_chk_sim_card'),
+        _buildChecklistTile('Stacker', 'ins_chk_stacker'),
+        _buildChecklistTile('Thermal Paper', 'ins_chk_thermal_paper'),
+        _buildChecklistTile('Promo Material', 'ins_chk_promo_material'),
+        _buildChecklistTile('Extra', 'ins_chk_extra'),
+      ];
+    } else if (_ticket!.type == 'PM') {
+      title = 'Checklist Maintenance (PM)';
+      items = [
+        _buildChecklistTile('EDC', 'pm_chk_edc'),
+        _buildChecklistTile('SAM Card', 'pm_chk_sam_card'),
+        _buildChecklistTile('SIM Card', 'pm_chk_sim_card'),
+        _buildChecklistTile('Cable ECR', 'pm_chk_cable_ecr'),
+        _buildChecklistTile('Adapter', 'pm_chk_adapter'),
+        _buildChecklistTile('Thermal Supply', 'pm_chk_thermal_supply'),
+        _buildChecklistTile('Promo Material', 'pm_chk_promo_material'),
+        _buildChecklistTile('Extra', 'pm_chk_extra'),
+      ];
+    } else if (_ticket!.type == 'CM') {
+      title = 'Checklist Perbaikan (CM)';
+      items = [
+        _buildChecklistTile('EDC', 'cm_chk_edc'),
+        _buildChecklistTile('SAM Card', 'cm_chk_sam_card'),
+        _buildChecklistTile('SIM Card', 'cm_chk_sim_card'),
+        _buildChecklistTile('Cable ECR', 'cm_chk_cable_ecr'),
+        _buildChecklistTile('Adapter', 'cm_chk_adapter'),
+        _buildChecklistTile('Thermal Supply', 'cm_chk_thermal_supply'),
+        _buildChecklistTile('Promo Material', 'cm_chk_promo_material'),
+        _buildChecklistTile('Extra', 'cm_chk_extra'),
+      ];
+    } else if (_ticket!.type == 'PULLOUT') {
+      title = 'Checklist Penarikan (PULLOUT)';
+      items = [
+        _buildChecklistTile('EDC', 'pu_chk_edc'),
+        _buildChecklistTile('SAM Card', 'pu_chk_sam_card'),
+        _buildChecklistTile('SIM Card', 'pu_chk_sim_card'),
+        _buildChecklistTile('Promo Material', 'pu_chk_promo_material'),
+        _buildChecklistTile('Cable Adapter', 'pu_chk_cable_adapter'),
+      ];
+    }
+
+    return _buildSectionCard(
+      title: title,
+      icon: Icons.checklist_rtl_rounded,
+      child: Column(children: items),
+    );
+  }
+
   Widget _buildPhotoUploader(String label, String columnKey, String bucket, String folder) {
-    final hasImage = _ticket?[columnKey] != null;
+    String? imageUrl;
+    if (columnKey == 'url_edc') imageUrl = _ticket?.urlEdc;
+    else if (columnKey == 'url_merchant') imageUrl = _ticket?.urlMerchant;
+    else if (columnKey == 'url_sales_draft') imageUrl = _ticket?.urlSalesDraft;
+    else if (columnKey == 'url_pic') imageUrl = _ticket?.urlPic;
+
+    final hasImage = imageUrl != null;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -521,7 +833,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               borderRadius: BorderRadius.circular(16),
               border: hasImage ? null : Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
               image: hasImage ? DecorationImage(
-                image: NetworkImage(_ticket![columnKey]),
+                image: NetworkImage(imageUrl!),
                 fit: BoxFit.cover,
               ) : null,
             ),
@@ -540,7 +852,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: const Icon(Icons.edit, size: 20, color: Color(0xFF00529C)),
+                      child: Icon(Icons.edit, size: 20, color: const Color(0xFF00529C)),
                     ),
                   )
                 : Column(
@@ -552,12 +864,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           color: const Color(0xFF00529C).withValues(alpha: 0.05),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.camera_alt_outlined, size: 30, color: Color(0xFF00529C)),
+                        child: Icon(Icons.camera_alt_outlined, size: 30, color: const Color(0xFF00529C)),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         "Ketuk untuk ambil foto",
-                        style: TextStyle(color: Color(0xFF00529C), fontWeight: FontWeight.w500),
+                        style: TextStyle(color: const Color(0xFF00529C), fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -572,7 +884,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800);
     
     if (pickedFile != null) {
-      // Filename convention: folder/ticket_id.jpg
       final filename = '$folder/${widget.ticketId}.jpg';
       final bytes = await pickedFile.readAsBytes();
       
@@ -580,7 +891,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
        if (url != null) {
         if (mounted) {
            setState(() {
-             _ticket?[columnKey] = url;
+             if (columnKey == 'url_edc') {
+               _ticket = Ticket.fromJson({..._ticket!.toJson(), 'url_edc': url});
+             } else if (columnKey == 'url_merchant') {
+               _ticket = Ticket.fromJson({..._ticket!.toJson(), 'url_merchant': url});
+             } else if (columnKey == 'url_sales_draft') {
+               _ticket = Ticket.fromJson({..._ticket!.toJson(), 'url_sales_draft': url});
+             } else if (columnKey == 'url_pic') {
+               _ticket = Ticket.fromJson({..._ticket!.toJson(), 'url_pic': url});
+             }
            });
         }
       }

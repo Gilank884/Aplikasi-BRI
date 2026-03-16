@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:marica/models/ticket_model.dart';
+import 'package:marica/repositories/ticket_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ticket_detail_screen.dart';
 
@@ -15,7 +16,7 @@ class TicketListScreen extends StatefulWidget {
 class _TicketListScreenState extends State<TicketListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final SupabaseClient supabase = Supabase.instance.client;
+  final TicketRepository _ticketRepository = TicketRepository();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -101,21 +102,8 @@ class _TicketListScreenState extends State<TicketListScreen>
   }
 
   Widget _buildTicketList(String status) {
-    var query = supabase
-        .from('tickets')
-        .select('*, merchants(merchant_name, address)')
-        .eq('status', status);
-
-    if (widget.filterType != null) {
-      query = query.eq('type', widget.filterType!);
-    }
-
-    // Apply ordering last
-    // ignore: unused_local_variable
-    final orderedQuery = query.order('opened_at', ascending: false);
-
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: query.order('opened_at', ascending: false),
+    return FutureBuilder<List<Ticket>>(
+      future: _ticketRepository.getTicketsByStatus(status, type: widget.filterType),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -129,9 +117,8 @@ class _TicketListScreenState extends State<TicketListScreen>
         // Client-side filtering
         if (_searchQuery.isNotEmpty) {
           tickets = tickets.where((ticket) {
-            final merchant = ticket['merchants'] as Map<String, dynamic>?;
-            final merchantName = (merchant?['merchant_name'] ?? '').toString().toLowerCase();
-            final ticketId = (ticket['ticket_id'] ?? '').toString().toLowerCase();
+            final merchantName = (ticket.merchant?['merchant_name'] ?? '').toString().toLowerCase();
+            final ticketId = ticket.ticketId.toLowerCase();
             return merchantName.contains(_searchQuery) || ticketId.contains(_searchQuery);
           }).toList();
         }
@@ -163,12 +150,11 @@ class _TicketListScreenState extends State<TicketListScreen>
           itemCount: tickets.length,
           itemBuilder: (context, index) {
             final ticket = tickets[index];
-            final merchant = ticket['merchants'] as Map<String, dynamic>?;
-            final merchantName = merchant?['merchant_name'] ?? 'Unknown Merchant';
-            final address = merchant?['address'] ?? '-';
-            final type = ticket['type'] ?? 'Unknown';
-            final priority = ticket['priority'] ?? 'REGULER';
-            final ticketId = ticket['ticket_id'] ?? '-';
+            final merchantName = ticket.merchant?['merchant_name'] ?? 'Unknown Merchant';
+            final address = ticket.merchant?['address'] ?? '-';
+            final type = ticket.type;
+            final priority = ticket.priority ?? 'REGULER';
+            final ticketId = ticket.ticketId;
             
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -192,7 +178,7 @@ class _TicketListScreenState extends State<TicketListScreen>
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => TicketDetailScreen(ticketId: ticket['ticket_id']),
+                        builder: (context) => TicketDetailScreen(ticketId: ticket.ticketId),
                       ),
                     );
                   },
