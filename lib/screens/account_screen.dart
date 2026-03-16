@@ -66,7 +66,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.only(top: 80, bottom: 40, left: 24, right: 24),
                           decoration: const BoxDecoration(
-                            color: Color(0xFF00529C),
+                            color: Color(0xFFFA6400),
                             borderRadius: BorderRadius.only(
                               bottomLeft: Radius.circular(32),
                               bottomRight: Radius.circular(32),
@@ -84,7 +84,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                 child: const CircleAvatar(
                                   radius: 50,
                                   backgroundColor: Colors.white,
-                                  child: Icon(Icons.person_rounded, size: 60, color: Color(0xFF00529C)),
+                                  child: Icon(Icons.person_rounded, size: 60, color: Color(0xFFFA6400)),
                                 ),
                               ),
                               const SizedBox(height: 20),
@@ -99,7 +99,7 @@ class _AccountScreenState extends State<AccountScreen> {
                               ),
                               const SizedBox(height: 6),
                               const Text(
-                                "teknisi@briedc.com",
+                                "teknisi@bniedc.com",
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 15,

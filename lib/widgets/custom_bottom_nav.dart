@@ -43,7 +43,7 @@ class CustomBottomNav extends StatelessWidget {
 
   Widget _buildNavItem(IconData icon, int index, String label) {
     final bool isActive = index == currentIndex;
-    const activeColor = Color(0xFF00529C);
+    const activeColor = Color(0xFFFA6400);
     const inactiveColor = Color(0xFF9E9E9E);
 
     return GestureDetector(

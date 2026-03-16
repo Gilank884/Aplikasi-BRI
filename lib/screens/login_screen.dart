@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF00529C),
+                    color: Color(0xFFFA6400),
                     borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(40),
                       bottomRight: Radius.circular(40),
@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
                       const Text(
-                        'Briedc',
+                        'Bniedc',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         'Selamat Datang',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF00529C),
+                              color: const Color(0xFFFA6400),
                             ),
                         textAlign: TextAlign.center,
                       ),
@@ -174,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
                             elevation: 8,
-                            shadowColor: const Color(0xFF00529C).withValues(alpha: 0.4),
+                            shadowColor: const Color(0xFFFA6400).withValues(alpha: 0.4),
                           ),
                           child: _isLoading
                               ? const SizedBox(

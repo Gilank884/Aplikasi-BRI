@@ -22,12 +22,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Briedc',
+      title: 'Bniedc',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00529C),
-          primary: const Color(0xFF00529C),
-          secondary: const Color(0xFF003B73),
+          seedColor: const Color(0xFFFA6400),
+          primary: const Color(0xFFFA6400),
+          secondary: const Color(0xFF005E6A),
           surface: Colors.grey[50]!,
         ),
         scaffoldBackgroundColor: Colors.grey[50],
@@ -37,17 +37,17 @@ class MyApp extends StatelessWidget {
           elevation: 0,
           scrolledUnderElevation: 0,
           backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF00529C),
+          foregroundColor: const Color(0xFFFA6400),
           titleTextStyle: GoogleFonts.poppins(
-            color: const Color(0xFF00529C),
+            color: const Color(0xFFFA6400),
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
-          iconTheme: const IconThemeData(color: Color(0xFF00529C)),
+          iconTheme: const IconThemeData(color: Color(0xFFFA6400)),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00529C),
+            backgroundColor: const Color(0xFFFA6400),
             foregroundColor: Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
@@ -73,7 +73,7 @@ class MyApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF00529C), width: 1.5),
+            borderSide: const BorderSide(color: Color(0xFFFA6400), width: 1.5),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),

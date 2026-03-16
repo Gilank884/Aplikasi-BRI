@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'BRI',
+              'BNI',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 22,
